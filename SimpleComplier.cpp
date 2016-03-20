@@ -1,14 +1,15 @@
 #include <iostream>
 #include <cstring>
+#include <cstdlib>
 
 using namespace std;
 
 const int MAX = 1000;
 const int MAXOFIDENTIFIER = 25;
-const int KEYWORDNUM = 30;
-const int UNARYOPERATORNUM = 8;
+const int KEYWORDNUM = 6;
+const int UNARYOPERATORNUM = 7;
 const int BINOCULAROPERATORNUM = 4;
-const int DELIMETERNUM = 11;
+const int DELIMETERNUM = 7;
 
 bool errorFlag = false;
 
@@ -36,23 +37,24 @@ struct TableNode
 {
     int type;     //标识符的类型
     int line;     //标识符所在行数
-    char symbol[MAXOFIDENTIFIER];  //标识符
+    char token[MAXOFIDENTIFIER];  //标识符
 };
 
-TableNode symbolTable[MAX];
-int tableIndex = 0;
+TableNode tokenTable[MAX];
+int tableNum = 0;
 
 
-const char* const keyWords[KEYWORDNUM] = {"and", "array", "begin", "case","char" ,"constant", "do",  "else", "end",
-"false","for",  "if", "input", "integer", "not", "of", "or", "output","procedure", "program",
- "read", "real","repeat", "set", "then", "to", "type", "until", "var","while"};
+const char* const keyWords[KEYWORDNUM] = {"begin", "else", "end",
+"if", "then","while"};
 
-const char unaryOperators[] = {'+','-','*','/','=','#','<','>'};
+const char unaryOperators[] = {'+','-','*','/','=','<','>'};
 
 const char* const binocularOperators[] = {"<=",">=",":=","<>"};
 
-const char delimeters[] = {'(', ')' , ',' , ';' , '.' , '[' , ']' , ':' , '{' , '}' , '"'};
+const char delimeters[] = {'(', ')' , ',' , ';' , '[' , ']' ,  '"'};
 
+
+char* Express(int& tableIndex);
 //errorTYpe=1 变量长度错误
 //errorType=2 小数点错误
 //errorTYpe=3 常量长度错误
@@ -65,16 +67,16 @@ void Error(ErrorType errorType,int line,const char* str)
     switch (errorType)
     {
     case LENGTHERROROFIDENTIFIER:
-        cout << "第" << line-1 <<"行" << str << " 变量的长度超过限制！\n";
+        cout << "第" << line <<"行" << str << " 变量的长度超过限制！\n";
                    break;
     case POINTERROR:
-        cout << "第" << line-1 <<"行" << str << " 小数点错误！\n";
+        cout << "第" << line <<"行" << str << " 小数点错误！\n";
                   break;
     case LENGTHERROROFCONSTANT:
-        cout << "第" << line-1 <<"行" << str << " 常量的长度超过限制！\n";
+        cout << "第" << line <<"行" << str << " 常量的长度超过限制！\n";
                 break;
     case UNKNOWNIDENTIFIER:
-        cout << "第"  << line-1 << "行" << str << "未知字符！\n";
+        cout << "第"  << line << "行" << str << "未知字符！\n";
     }
 }
 
@@ -83,6 +85,7 @@ void Scanner(const char* sourceCode)
     int codeLength = strlen(sourceCode);
     int chIndex = 0;
     int line = 1;
+    int tableIndex = 0;
 
     while (chIndex < codeLength)
     {
@@ -134,18 +137,18 @@ void Scanner(const char* sourceCode)
                 for (i = 0;i < KEYWORDNUM;i++)
                     if (strcmp(str,keyWords[i]) == 0)
                     {
-                        symbolTable[tableIndex].type = KEYWORD;
-                        symbolTable[tableIndex].line = line;
-                        strcpy(symbolTable[tableIndex].symbol,str);
+                        tokenTable[tableIndex].type = KEYWORD;
+                        tokenTable[tableIndex].line = line;
+                        strcpy(tokenTable[tableIndex].token,str);
                         tableIndex++;
                         break;
                     }
 
                 if (i >= KEYWORDNUM)
                 {
-                    symbolTable[tableIndex].type = IDENTIFIER;
-                    symbolTable[tableIndex].line = line;
-                    strcpy(symbolTable[tableIndex].symbol,str);
+                    tokenTable[tableIndex].type = IDENTIFIER;
+                    tokenTable[tableIndex].line = line;
+                    strcpy(tokenTable[tableIndex].token,str);
                     tableIndex++;
                 }
             }
@@ -180,12 +183,12 @@ void Scanner(const char* sourceCode)
                 Error(POINTERROR,line,str);
             else
             {
-                symbolTable[tableIndex].line = line;
-                strcpy(symbolTable[tableIndex].symbol,str);
+                tokenTable[tableIndex].line = line;
+                strcpy(tokenTable[tableIndex].token,str);
                 if (pointFlag == 0)
-                    symbolTable[tableIndex].type = INTEGER;
+                    tokenTable[tableIndex].type = INTEGER;
                 else
-                    symbolTable[tableIndex].type = FLOAT;
+                    tokenTable[tableIndex].type = FLOAT;
                 tableIndex++;
             }
         }
@@ -202,9 +205,9 @@ void Scanner(const char* sourceCode)
             for (i = 0;i < BINOCULAROPERATORNUM;i++)
                 if (strcmp(str,binocularOperators[i]) == 0)
                 {
-                    symbolTable[tableIndex].line = line;
-                    symbolTable[tableIndex].type = BOPERATOR;
-                    strcpy(symbolTable[tableIndex].symbol,str);
+                    tokenTable[tableIndex].line = line;
+                    tokenTable[tableIndex].type = BOPERATOR;
+                    strcpy(tokenTable[tableIndex].token,str);
                     tableIndex++;
                     chIndex += 2;
                     break;
@@ -216,10 +219,10 @@ void Scanner(const char* sourceCode)
                 for (j = 0;j < UNARYOPERATORNUM;j++)
                     if (sourceCode[chIndex] == unaryOperators[j])
                     {
-                        symbolTable[tableIndex].line = line;
-                        symbolTable[tableIndex].type = UOPERATOR;
-                        symbolTable[tableIndex].symbol[0] = sourceCode[chIndex];
-                        symbolTable[tableIndex].symbol[1] = 0;
+                        tokenTable[tableIndex].line = line;
+                        tokenTable[tableIndex].type = UOPERATOR;
+                        tokenTable[tableIndex].token[0] = sourceCode[chIndex];
+                        tokenTable[tableIndex].token[1] = 0;
                         tableIndex++;
                         chIndex++;
                         break;
@@ -234,10 +237,10 @@ void Scanner(const char* sourceCode)
                 {
                     if (str[0] == delimeters[k])
                     {
-                        symbolTable[tableIndex].line = line;
-                        symbolTable[tableIndex].type = DELIMETER;
-                        symbolTable[tableIndex].symbol[0] = sourceCode[chIndex];
-                        symbolTable[tableIndex].symbol[1] = 0;
+                        tokenTable[tableIndex].line = line;
+                        tokenTable[tableIndex].type = DELIMETER;
+                        tokenTable[tableIndex].token[0] = sourceCode[chIndex];
+                        tokenTable[tableIndex].token[1] = 0;
                         tableIndex++;
                         chIndex++;
                         break;
@@ -251,24 +254,175 @@ void Scanner(const char* sourceCode)
                 Error(UNKNOWNIDENTIFIER,line,str);
         }
     }
+
+    tableNum = tableIndex;
 }
 
+void Emit(char* result,char* leftParameter,char* op,char* rightParameter)
+{
+    cout << result << "=" << leftParameter << op << rightParameter << endl;
+}
+
+char* NewVar()
+{
+   static int k = 0;
+
+   k++;
+
+   char* tempVar = new char[5];
+   tempVar[0] = 't';
+
+   char numtoch[5];
+   itoa(k,numtoch,10);
+   strcmp(tempVar+1,numtoch);
+
+   return tempVar;
+}
+
+char* Factor(int& tableIndex)
+{
+    char* result = new char[MAXOFIDENTIFIER];
+
+    if (tokenTable[tableIndex].type == IDENTIFIER
+        || tokenTable[tableIndex].type == INTEGER
+        || tokenTable[tableIndex].type == FLOAT)
+    {
+        strcpy(result,tokenTable[tableIndex].token);
+        tableIndex++;
+    }
+    else if (strcmp("(",tokenTable[tableIndex].token) == 0)
+    {
+        tableIndex++;
+        strcpy(result, Express(tableIndex));
+        if (strcmp(")",tokenTable[tableIndex].token) == 0)
+            tableIndex++;
+        else
+        {
+            errorFlag = true;
+            cout << "缺少)！" << endl;
+        }
+    }
+    else
+    {
+        errorFlag = true;
+        cout << "缺少(！" << endl;
+    }
+
+    return result;
+}
+char* Term(int& tableIndex)
+{
+    char* result = new char[MAXOFIDENTIFIER];
+    char leftParameter[MAXOFIDENTIFIER];
+    char rightParameter[MAXOFIDENTIFIER];
+    char op[5];
+
+    strcpy(leftParameter,Factor(tableIndex));
+
+    while (strcmp("*",tokenTable[tableIndex].token) == 0
+           || strcmp("/",tokenTable[tableIndex].token) == 0)
+    {
+        strcpy(op,tokenTable[tableIndex].token);
+        tableIndex++;
+        strcpy(rightParameter,Factor(tableIndex));
+        strcpy(result,NewVar());
+        Emit(result,leftParameter,op,rightParameter);
+    }
+
+    return result;
+}
+char* Express(int& tableIndex)
+{
+    char* result = new char[MAXOFIDENTIFIER];
+    char leftParameter[MAXOFIDENTIFIER];
+    char rightParameter[MAXOFIDENTIFIER];
+    char op[5];
+
+    strcpy(leftParameter,Term(tableIndex));
+
+    while (strcmp("+",tokenTable[tableIndex].token) == 0
+           || strcmp("-",tokenTable[tableIndex].token) == 0)
+    {
+        strcpy(op,tokenTable[tableIndex].token);
+        tableIndex++;
+
+        strcpy(rightParameter,Term(tableIndex));
+
+        strcpy(result,NewVar());
+
+        Emit(result,leftParameter,op,rightParameter);
+    }
+
+    return result;
+}
+void Statement(int& tableIndex)
+{
+    if (tokenTable[tableIndex].type == IDENTIFIER)
+    {
+        char* leftValue = tokenTable[tableIndex].token;
+            tableIndex++;
+
+        if (strcmp(":=",tokenTable[tableIndex].token) == 0)
+        {
+            tableIndex++;
+            char rightValue[MAXOFIDENTIFIER];
+            strcpy(rightValue,Express(tableIndex));
+            Emit(leftValue,rightValue,"","");
+        }
+        else
+        {
+            errorFlag = true;
+            cout << "缺少赋值符！" << endl;
+        }
+    }
+}
+
+void Block(int& tableIndex)
+{
+    Statement(tableIndex);
+    while (strcmp(";",tokenTable[tableIndex].token) == 0)
+    {
+        tableIndex++;
+        Statement(tableIndex);
+    }
+}
+
+void Parser()
+{
+    int tableIndex = 0;
+
+    if (strcmp("begin",tokenTable[tableIndex].token) == 0)
+    {
+        tableIndex++;
+        Block(tableIndex);
+
+        if (strcmp("end",tokenTable[tableIndex].token) == 0)
+            cout << "成功！" << endl;
+        else
+        {
+            errorFlag = true;
+            cout << "缺少end!" << endl;
+        }
+    }
+    else
+    {
+        errorFlag = true;
+        cout << "缺少begin!" << endl;
+    }
+}
 int main()
 {
-    char sourceCode[MAX];   //存放输入代码的缓冲区
+    char sourceCode[MAX];
     cout << "请输入源程序（输入结束标志位#）：\n";
 
-    /***********************************从键盘输入****************************/
+
     cin.getline(sourceCode,MAX,'#');
-    Scanner(sourceCode); //调用扫描函数
+    Scanner(sourceCode);
+
+    Parser();
 
     if (errorFlag)
         return 0;
-
-    cout << "\n符号表：\n";
-    cout <<"单词"<<"      "<<"类型" << endl;
-    for (int i = 0;i < tableIndex;i++)
-        cout << symbolTable[i].symbol <<"       "<<symbolTable[i].type <<endl;
 
     return 0;
 }
